@@ -14,11 +14,13 @@ interface Car {
 
 interface BookingModalProps {
   car: Car
+  isOpen: boolean
   onClose: () => void
   onSuccess: () => void
 }
 
-export default function BookingModal({ car, onClose, onSuccess }: BookingModalProps) {
+export default function BookingModal({ car, isOpen, onClose, onSuccess }: BookingModalProps) {
+  if (!isOpen) return null
   const { token } = useAuth()
   const router = useRouter()
   const [formData, setFormData] = useState({

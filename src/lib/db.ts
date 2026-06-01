@@ -1,4 +1,4 @@
-import { createClient, type Client } from '@libsql/client';
+import { createClient, type Client, type InValue } from '@libsql/client';
 
 const globalForDb = globalThis as unknown as { db: Client };
 
@@ -12,16 +12,18 @@ function createDb(): Client {
 export const db: Client = globalForDb.db || createDb();
 if (process.env.NODE_ENV !== 'production') globalForDb.db = db;
 
-export async function queryAll<T = Record<string, unknown>>(sql: string, args: unknown[] = []): Promise<T[]> {
+type Args = InValue[];
+
+export async function queryAll<T = Record<string, unknown>>(sql: string, args: Args = []): Promise<T[]> {
   const res = await db.execute({ sql, args });
   return res.rows as unknown as T[];
 }
 
-export async function queryOne<T = Record<string, unknown>>(sql: string, args: unknown[] = []): Promise<T | null> {
+export async function queryOne<T = Record<string, unknown>>(sql: string, args: Args = []): Promise<T | null> {
   const res = await db.execute({ sql, args });
   return (res.rows[0] as unknown as T) ?? null;
 }
 
-export async function execute(sql: string, args: unknown[] = []) {
+export async function execute(sql: string, args: Args = []) {
   return db.execute({ sql, args });
 }

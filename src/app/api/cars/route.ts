@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { type InValue } from '@libsql/client';
 import { queryAll, queryOne } from '@/lib/db';
 
 export async function GET(req: Request) {
@@ -12,7 +13,7 @@ export async function GET(req: Request) {
     const available = searchParams.get('available');
 
     const conditions: string[] = [];
-    const params: unknown[] = [];
+    const params: InValue[] = [];
 
     if (type) { conditions.push('type = ?'); params.push(type); }
     if (transmission) { conditions.push('transmission = ?'); params.push(transmission); }

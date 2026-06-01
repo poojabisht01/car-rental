@@ -36,7 +36,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     for (const [k, v] of Object.entries(fields)) {
       if (v !== undefined) { sets.push(`${k} = ?`); vals.push(v); }
     }
-    if (sets.length) { vals.push(id); await execute(`UPDATE Car SET ${sets.join(', ')} WHERE id = ?`, vals); }
+    if (sets.length) { vals.push(id); await execute(`UPDATE Car SET ${sets.join(', ')} WHERE id = ?`, vals as import('@libsql/client').InValue[]); }
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Admin car PUT error:', error);
