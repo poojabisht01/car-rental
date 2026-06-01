@@ -1,0 +1,29 @@
+import { NextResponse } from 'next/server';
+import bcrypt from 'bcryptjs';
+import db from '@/lib/db';
+import { signToken } from '@/lib/auth';
+
+function cuid() {
+  return Math.random().toString(36).slice(2) + Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
+
+export async function POST(req: Request) {
+  try {
+    const { name, email, password, phone } = await req.json();
+    if (!name || !email || !password) return NextResponse.json({ error: 'Name, email, and password are required' }, { status: 400 });
+
+    const existing = db.prepare('SELECT id FROM User WHERE email = ?').get(email);
+    if (existing) return NextResponse.json({ error: 'Email already in use' }, { status: 409 });
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const id = cuid();
+    const now = new Date().toISOString();
+    db.prepare('INSERT INTO User (id, name, email, password, phone, role, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)').run(id, name, email, hashedPassword, phone || null, 'user', now);
+
+    const token = signToken({ id, email, role: 'user' });
+    return NextResponse.json({ token, user: { id, name, email, role: 'user' } }, { status: 201 });
+  } catch (error) {
+    console.error('Register error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
