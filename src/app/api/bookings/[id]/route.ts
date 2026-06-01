@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import db from '@/lib/db';
+import { queryOne, execute } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -7,7 +7,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     const user = await getCurrentUser(req);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const { id } = await params;
-    const booking = db.prepare('SELECT * FROM Booking WHERE id = ?').get(id) as { userId: string } | undefined;
+    const booking = await queryOne<{ userId: string }>('SELECT * FROM Booking WHERE id = ?', [id]);
     if (!booking) return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
     if (booking.userId !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     return NextResponse.json({ booking });
@@ -22,11 +22,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const user = await getCurrentUser(req);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const { id } = await params;
-    const booking = db.prepare('SELECT * FROM Booking WHERE id = ?').get(id) as { userId: string; status: string } | undefined;
+    const booking = await queryOne<{ userId: string; status: string }>('SELECT * FROM Booking WHERE id = ?', [id]);
     if (!booking) return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
     if (booking.userId !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     if (booking.status === 'cancelled') return NextResponse.json({ error: 'Already cancelled' }, { status: 409 });
-    db.prepare('UPDATE Booking SET status = ? WHERE id = ?').run('cancelled', id);
+    await execute('UPDATE Booking SET status = ? WHERE id = ?', ['cancelled', id]);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Booking PATCH error:', error);

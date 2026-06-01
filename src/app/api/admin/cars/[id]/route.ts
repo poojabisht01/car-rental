@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import db from '@/lib/db';
+import { queryOne, execute } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 
 async function requireAdmin(req: Request) {
@@ -14,7 +14,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const auth = await requireAdmin(req);
     if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
     const { id } = await params;
-    const existing = db.prepare('SELECT id FROM Car WHERE id = ?').get(id);
+    const existing = await queryOne('SELECT id FROM Car WHERE id = ?', [id]);
     if (!existing) return NextResponse.json({ error: 'Car not found' }, { status: 404 });
 
     const body = await req.json();
@@ -36,7 +36,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     for (const [k, v] of Object.entries(fields)) {
       if (v !== undefined) { sets.push(`${k} = ?`); vals.push(v); }
     }
-    if (sets.length) { vals.push(id); db.prepare(`UPDATE Car SET ${sets.join(', ')} WHERE id = ?`).run(...vals); }
+    if (sets.length) { vals.push(id); await execute(`UPDATE Car SET ${sets.join(', ')} WHERE id = ?`, vals); }
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Admin car PUT error:', error);
@@ -49,8 +49,8 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     const auth = await requireAdmin(req);
     if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
     const { id } = await params;
-    db.prepare('DELETE FROM Booking WHERE carId = ?').run(id);
-    db.prepare('DELETE FROM Car WHERE id = ?').run(id);
+    await execute('DELETE FROM Booking WHERE carId = ?', [id]);
+    await execute('DELETE FROM Car WHERE id = ?', [id]);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Admin car DELETE error:', error);

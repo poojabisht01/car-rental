@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import db from '@/lib/db';
+import { queryAll, queryOne } from '@/lib/db';
 
 export async function GET(req: Request) {
   try {
@@ -12,7 +12,7 @@ export async function GET(req: Request) {
     const available = searchParams.get('available');
 
     const conditions: string[] = [];
-    const params: (string | number)[] = [];
+    const params: unknown[] = [];
 
     if (type) { conditions.push('type = ?'); params.push(type); }
     if (transmission) { conditions.push('transmission = ?'); params.push(transmission); }
@@ -25,10 +25,10 @@ export async function GET(req: Request) {
     }
 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
-    const cars = db.prepare(`SELECT * FROM Car ${where} ORDER BY createdAt DESC`).all(...params);
-    const { count } = db.prepare(`SELECT COUNT(*) as count FROM Car ${where}`).get(...params) as { count: number };
+    const cars = await queryAll(`SELECT * FROM Car ${where} ORDER BY createdAt DESC`, params);
+    const row = await queryOne<{ count: number }>(`SELECT COUNT(*) as count FROM Car ${where}`, params);
 
-    return NextResponse.json({ cars, totalCars: count });
+    return NextResponse.json({ cars, totalCars: Number(row?.count ?? 0) });
   } catch (error) {
     console.error('Cars GET error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

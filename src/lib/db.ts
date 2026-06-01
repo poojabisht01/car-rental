@@ -1,18 +1,27 @@
-import Database from 'better-sqlite3';
-import path from 'path';
+import { createClient, type Client } from '@libsql/client';
 
-const globalForDb = globalThis as unknown as { db: Database.Database };
+const globalForDb = globalThis as unknown as { db: Client };
 
-function getDb() {
-  const dbPath = path.join(process.cwd(), 'prisma', 'dev.db');
-  const db = new Database(dbPath);
-  db.pragma('journal_mode = WAL');
-  db.pragma('foreign_keys = ON');
-  return db;
+function createDb(): Client {
+  return createClient({
+    url: process.env.TURSO_DATABASE_URL ?? 'file:./prisma/dev.db',
+    authToken: process.env.TURSO_AUTH_TOKEN,
+  });
 }
 
-export const db: Database.Database = globalForDb.db || getDb();
-
+export const db: Client = globalForDb.db || createDb();
 if (process.env.NODE_ENV !== 'production') globalForDb.db = db;
 
-export default db;
+export async function queryAll<T = Record<string, unknown>>(sql: string, args: unknown[] = []): Promise<T[]> {
+  const res = await db.execute({ sql, args });
+  return res.rows as unknown as T[];
+}
+
+export async function queryOne<T = Record<string, unknown>>(sql: string, args: unknown[] = []): Promise<T | null> {
+  const res = await db.execute({ sql, args });
+  return (res.rows[0] as unknown as T) ?? null;
+}
+
+export async function execute(sql: string, args: unknown[] = []) {
+  return db.execute({ sql, args });
+}

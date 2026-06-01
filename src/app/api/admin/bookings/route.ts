@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import db from '@/lib/db';
+import { queryAll, queryOne, execute } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 
 async function requireAdmin(req: Request) {
@@ -14,13 +14,12 @@ export async function GET(req: Request) {
     const auth = await requireAdmin(req);
     if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
-    const bookings = db.prepare(`
+    const bookings = await queryAll(`
       SELECT b.*, u.name as userName, u.email as userEmail, c.name as carName
       FROM Booking b
       LEFT JOIN User u ON b.userId = u.id
       LEFT JOIN Car c ON b.carId = c.id
-      ORDER BY b.createdAt DESC
-    `).all();
+      ORDER BY b.createdAt DESC`);
 
     const formatted = bookings.map((b: Record<string, unknown>) => ({
       ...b,
@@ -43,10 +42,10 @@ export async function PATCH(req: Request) {
     const { id, status } = await req.json();
     if (!id || !status) return NextResponse.json({ error: 'id and status required' }, { status: 400 });
 
-    const existing = db.prepare('SELECT id FROM Booking WHERE id = ?').get(id);
+    const existing = await queryOne('SELECT id FROM Booking WHERE id = ?', [id]);
     if (!existing) return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
 
-    db.prepare('UPDATE Booking SET status = ? WHERE id = ?').run(status, id);
+    await execute('UPDATE Booking SET status = ? WHERE id = ?', [status, id]);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Admin bookings PATCH error:', error);

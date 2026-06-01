@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
-import db from '@/lib/db';
+import { queryOne } from '@/lib/db';
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const car = db.prepare('SELECT * FROM Car WHERE id = ?').get(id);
+    const car = await queryOne('SELECT * FROM Car WHERE id = ?', [id]);
     if (!car) return NextResponse.json({ error: 'Car not found' }, { status: 404 });
     return NextResponse.json(car);
   } catch (error) {

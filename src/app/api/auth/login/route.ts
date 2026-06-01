@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
-import db from '@/lib/db';
+import { queryOne } from '@/lib/db';
 import { signToken } from '@/lib/auth';
 
 export async function POST(req: Request) {
@@ -8,7 +8,9 @@ export async function POST(req: Request) {
     const { email, password } = await req.json();
     if (!email || !password) return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
 
-    const user = db.prepare('SELECT * FROM User WHERE email = ?').get(email) as { id: string; name: string; email: string; password: string; role: string } | undefined;
+    const user = await queryOne<{ id: string; name: string; email: string; password: string; role: string }>(
+      'SELECT * FROM User WHERE email = ?', [email]
+    );
     if (!user) return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
 
     const match = await bcrypt.compare(password, user.password);
